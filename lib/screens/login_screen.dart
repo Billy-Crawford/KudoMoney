@@ -1,104 +1,130 @@
-import 'dart:convert';
+//lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'otp_verification_screen.dart';
-import 'register_screen.dart'; // Assure-toi que ce fichier existe
+import 'package:kudo_m/screens/register_screen.dart';
+import 'package:kudo_m/screens/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  String _errorMessage = '';
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _login() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    final url = Uri.parse('https://kudamoney.onrender.com/api/users/login/');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': _phoneController.text.trim(),
-        'password': _passwordController.text.trim(),
-      }),
-    );
-
-    setState(() => _isLoading = false);
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      final message = json['message'];
-
-      if (message == "OTP envoyé pour vérification.") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OTPVerificationScreen(
-              phone: _phoneController.text.trim(),
-            ),
-          ),
-        );
-      } else {
-        setState(() => _errorMessage = "Une erreur inattendue est survenue.");
-      }
-    } else {
-      final errorJson = jsonDecode(response.body);
-      setState(() => _errorMessage = errorJson['message'] ?? 'Erreur de connexion');
-    }
+  void _handleLogin() {
+    print('Numéro: ${_phoneController.text}, Mot de passe: ${_passwordController.text}');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("CONNEXION")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: "Numéro de téléphone"),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Mot de passe"),
-            ),
-            const SizedBox(height: 20),
-            if (_errorMessage.isNotEmpty)
-              Text(_errorMessage, style: const TextStyle(color: Colors.red)),
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
-              ElevatedButton(
-                onPressed: _login,
-                child: const Text("Se connecter"),
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ✅ Logo
+              Center(
+                child: Image.asset(
+                  'assets/kudo1-rbg.png', // ⚠️ vérifie que ce fichier existe dans assets
+                  width: 120,
+                  height: 120,
+                ),
               ),
-            const SizedBox(height: 20),
-            const Divider(),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
-              child: const Text("Vous n'avez pas de compte ? Créer un compte"),
-            ),
-          ],
+              const SizedBox(height: 40),
+
+              const Text(
+                "Connexion",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 30),
+
+              // 📱 Téléphone
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: "Numéro de téléphone",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 🔒 Mot de passe
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Mot de passe",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+
+              // 🔽 ESPACE AVANT LE BOUTON
+              const SizedBox(height: 50),
+
+              // 🔘 Bouton Se connecter
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    "Se connecter",
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 70),
+
+              // 🔗 Lien de bas de page
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RegisterScreen(),
+                    ),
+                  );
+                },
+                child: const Text("Pas encore inscrit ?, Créer un compte"),
+              ),
+              // 🔁 Lien Mot de passe oublié
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ResetPasswordScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    "Mot de passe oublié ?",
+                    style: TextStyle(color: Colors.blueAccent),
+                  ),
+                ),
+              ),
+
+
+            ],
+          ),
         ),
       ),
     );
