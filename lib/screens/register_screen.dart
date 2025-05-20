@@ -54,18 +54,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'username': username,
           'phone': fullPhone,
           'password': password,
-          'country': _selectedCountry,
+          'pays': _selectedCountry,
         }),
       );
 
-      final data = jsonDecode(response.body);
+      Map<String, dynamic> data = {};
+
+      try {
+        if (response.headers['content-type']?.contains('application/json') ?? false) {
+          data = jsonDecode(response.body);
+        } else {
+          throw Exception('Réponse inattendue du serveur. Code: ${response.statusCode}');
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Erreur lors de la lecture de la réponse: ${e.toString()}';
+        });
+        return;
+      }
+
+      print('Status: ${response.statusCode}');
+      print('Body: ${response.body}');
+
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final userId = data['id'];
+        final userId = data['user_id']; // ← corriger ici (user_id au lieu de id)
         if (userId == null) {
-          throw Exception('Identifiant utilisateur introuvable.');
+          throw Exception('Identifiant utilisateur introuvable dans la réponse.');
         }
 
-        // ✅ Naviguer vers l'écran KYC avec les vraies données
+        // Aller à l'écran KYC avec les données
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -95,6 +112,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
+  void dispose() {
+    _usernameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -117,12 +142,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 30),
 
+            // Username
             TextField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: "Nom d'utilisateur", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: "Nom d'utilisateur",
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
 
+            // Country dropdown
             DropdownButtonFormField<String>(
               value: _selectedCountry,
               items: _countryCodes.keys.map((country) {
@@ -137,10 +167,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _countryCode = _countryCodes[value]!;
                 });
               },
-              decoration: const InputDecoration(labelText: "Pays", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: "Pays",
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
 
+            // Phone with country code
             Row(
               children: [
                 Container(
@@ -177,16 +211,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 12),
 
+            // Password
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: "Mot de passe", border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: "Mot de passe",
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 20),
 
+            // Error message
             if (_errorMessage.isNotEmpty)
-              Text(_errorMessage, style: const TextStyle(color: Colors.red)),
+              Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
 
+            // Submit button
+            const SizedBox(height: 10),
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : SizedBox(
@@ -200,6 +244,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 30),
 
+            // Go to login
             TextButton(
               onPressed: () {
                 Navigator.pushReplacement(
