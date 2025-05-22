@@ -121,16 +121,8 @@ class _DashboardTogoScreenState extends State<DashboardTogoScreen> {
                       ),
                       const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end, // 👈 placé à droite
                         children: const [
-                          // Column(
-                          //   children: [
-                          //     Icon(Icons.add_card),
-                          //     SizedBox(height: 4),
-                          //     Text("Recharger le\ncompte",
-                          //         textAlign: TextAlign.center),
-                          //   ],
-                          // ),
                           Column(
                             children: [
                               Icon(Icons.download),
