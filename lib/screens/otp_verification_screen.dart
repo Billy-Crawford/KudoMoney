@@ -67,20 +67,21 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
       if (walletResponse.statusCode == 200) {
         final walletData = jsonDecode(walletResponse.body);
+        print("WALLET RESPONSE : $walletData");
 
-        final userName = walletData['user_name'] ?? 'Utilisateur';
-        final balance = walletData['balance'] ?? 0;
+        final userName = walletData['user'];
+        final balance = walletData['balance'];
 
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_name', userName.toString());
         await prefs.setString('balance', balance.toString());
 
-        // ✅ Naviguer vers le Dashboard avec les bonnes données
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
             builder: (_) => DashboardScreen(
-              username: userName.toString(),
-              balance: balance.toString(),
+              username: userName,
+              balance: balance,
             ),
           ),
               (route) => false,
