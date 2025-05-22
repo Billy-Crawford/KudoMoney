@@ -1,58 +1,175 @@
 // lib/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
-import '../utils/idle_timer.dart';
-import 'login_screen.dart';   //pour la redirection
-import 'dart:async';
+import '../widgets/transaction_card.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final String username;
+  final String balance;
+
+  const DashboardScreen({
+    Key? key,
+    required this.username,
+    required this.balance,
+  }) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  late IdleTimer _idleTimer;
+  bool _isBalanceVisible = true;
+  late double _balance;
 
   @override
   void initState() {
     super.initState();
-
-    _idleTimer = IdleTimer(
-        timeout: const Duration(minutes: 3),
-        onTimeout: _handleSessionTimeout,
-    );
-
-    _idleTimer.reset();    //demarrer le timer
+    _balance = double.tryParse(widget.balance) ?? 0.0;
   }
-
-  void _handleSessionTimeout() {
-    //Redirige vers la page de login
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-    );
-  }
-
-  @override
-  void dipose() {
-    _idleTimer.dispose();
-    super.dispose();
-  }
-
-  //chaque interaction avec l'ecran redemarre le timer
-void _onUserInteraction([_]) => _idleTimer.reset();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: _onUserInteraction,
-      onPanDown: _onUserInteraction,
-      child: Scaffold(
-        appBar: AppBar(title: const Text("Tableau de bord")),
-        body: const Center(child: Text("Bienvenue dans le Tableau de bord")),
+    return Scaffold(
+      drawer: Drawer(), // Menu latéral à personnaliser plus tard
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.apps, color: Colors.black),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: Icon(Icons.notifications_none, color: Colors.black),
+          ),
+        ],
+      ),
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Tableau de bord",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text(
+              "Bienvenue, ${widget.username}",
+              style: const TextStyle(
+                fontSize: 20,
+                fontFamily: 'DancingScript',
+              ),
+            ),
+            const SizedBox(height: 20),
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(left: 100),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text("Solde",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isBalanceVisible = !_isBalanceVisible;
+                              });
+                            },
+                            child: Icon(
+                              _isBalanceVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _isBalanceVisible
+                            ? "${_balance.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ' ')} XAF"
+                            : "********",
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Column(
+                            children: [
+                              Icon(Icons.add_card),
+                              SizedBox(height: 4),
+                              Text("Recharger le\ncompte",
+                                  textAlign: TextAlign.center),
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              Icon(Icons.send),
+                              SizedBox(height: 4),
+                              Text("Envoyer de\nl'argent",
+                                  textAlign: TextAlign.center),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  top: 0,
+                  child: Image.asset(
+                    'assets/pointing_man.png',
+                    width: 140,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            const Text("Dernières Transactions",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TransactionCard(
+              beneficiary: "JoeCobra",
+              amount: "300,000,000",
+              dateTime: "13-11-25/13:10",
+              status: "Succès",
+            ),
+            const SizedBox(height: 10),
+            TransactionCard(
+              beneficiary: "Otis",
+              amount: "600,000,000",
+              dateTime: "15-07-25/19:10",
+              status: "Échec",
+            ),
+          ],
+        ),
       ),
     );
   }

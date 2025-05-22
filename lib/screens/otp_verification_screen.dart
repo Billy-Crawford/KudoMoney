@@ -1,10 +1,9 @@
 // lib/screens/otp_verification_screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
-import 'home_screen.dart';
+import 'dashboard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
@@ -16,11 +15,18 @@ class OTPVerificationScreen extends StatefulWidget {
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final _otpController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+  late TextEditingController _phoneController;
   bool _isLoading = false;
   bool _isResending = false;
   String _errorMessage = '';
   String _successMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController = TextEditingController(text: widget.phone);
+  }
 
   Future<void> _verifyOtp() async {
     setState(() {
@@ -34,7 +40,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'phone': widget.phone,
+        'phone': _phoneController.text.trim(),
         'otp': _otpController.text.trim(),
       }),
     );
@@ -42,11 +48,46 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     setState(() => _isLoading = false);
 
     if (response.statusCode == 200) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (route) => false,
+      final data = jsonDecode(response.body);
+      final accessToken = data['access_token'];
+      final refreshToken = data['refresh_token'];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', accessToken);
+      await prefs.setString('refresh_token', refreshToken);
+
+      // 🔁 Appeler l’API pour récupérer le nom d’utilisateur et le solde
+      final walletResponse = await http.get(
+        Uri.parse('https://kudamoney.onrender.com/api/wallets/wallet/'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
       );
+
+      if (walletResponse.statusCode == 200) {
+        final walletData = jsonDecode(walletResponse.body);
+
+        final userName = walletData['user_name'] ?? 'Utilisateur';
+        final balance = walletData['balance'] ?? 0;
+
+        await prefs.setString('user_name', userName.toString());
+        await prefs.setString('balance', balance.toString());
+
+        // ✅ Naviguer vers le Dashboard avec les bonnes données
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DashboardScreen(
+              username: userName.toString(),
+              balance: balance.toString(),
+            ),
+          ),
+              (route) => false,
+        );
+      } else {
+        setState(() => _errorMessage = "Impossible de récupérer le portefeuille.");
+      }
     } else {
       final errorJson = jsonDecode(response.body);
       setState(() => _errorMessage = errorJson['message'] ?? "Code incorrect. Veuillez réessayer.");
@@ -64,7 +105,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': widget.phone}),
+      body: jsonEncode({'phone': _phoneController.text.trim()}),
     );
 
     setState(() => _isResending = false);
@@ -99,16 +140,21 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   const Icon(Icons.sms, size: 60, color: Colors.blueAccent),
                   const SizedBox(height: 20),
                   Text(
-                    "Un code OTP a été envoyé à :",
+                    "Un code OTP a été envoyé à ce numéro :",
                     style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                     textAlign: TextAlign.center,
                   ),
-                  Text(
-                    widget.phone,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: "Numéro de téléphone",
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone),
+                    ),
                   ),
-                  const SizedBox(height: 30),
-
+                  const SizedBox(height: 20),
                   TextField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
@@ -118,16 +164,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   if (_errorMessage.isNotEmpty)
                     Text(_errorMessage, style: const TextStyle(color: Colors.red)),
                   if (_successMessage.isNotEmpty)
                     Text(_successMessage, style: const TextStyle(color: Colors.green)),
-
                   const SizedBox(height: 20),
-
                   _isLoading
                       ? const CircularProgressIndicator()
                       : SizedBox(
@@ -147,9 +189,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   TextButton.icon(
                     onPressed: _isResending ? null : _resendOtp,
                     icon: _isResending

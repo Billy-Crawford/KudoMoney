@@ -1,7 +1,11 @@
 //lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import 'package:kudo_m/screens/register_screen.dart';
 import 'package:kudo_m/screens/reset_password_screen.dart';
+import 'package:kudo_m/screens/otp_verification_screen.dart'; // 👈 Assure-toi d'importer cet écran
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -13,9 +17,54 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  void _handleLogin() {
-    print('Numéro: ${_phoneController.text}, Mot de passe: ${_passwordController.text}');
+  Future<void> _handleLogin() async {
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (phone.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorMessage = "Veuillez remplir tous les champs.";
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://kudamoney.onrender.com/api/users/login/"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phone': phone, 'password': password}),
+      );
+
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 200) {
+        // 👇 Redirection vers l'écran de vérification OTP
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OTPVerificationScreen(phone: phone),
+          ),
+        );
+      } else {
+        final body = jsonDecode(response.body);
+        setState(() {
+          _errorMessage = body['message'] ?? 'Échec de la connexion.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erreur réseau. Veuillez réessayer.';
+      });
+    }
   }
 
   @override
@@ -31,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // ✅ Logo
               Center(
                 child: Image.asset(
-                  'assets/kudo1-rbg.png', // ⚠️ vérifie que ce fichier existe dans assets
+                  'assets/kudo1-rbg.png',
                   width: 120,
                   height: 120,
                 ),
@@ -44,11 +93,19 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 30),
 
+              if (_errorMessage != null)
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+
+              const SizedBox(height: 10),
+
               // 📱 Téléphone
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: "Numéro de téléphone",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
@@ -60,14 +117,13 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: "Mot de passe",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
                 ),
               ),
 
-              // 🔽 ESPACE AVANT LE BOUTON
               const SizedBox(height: 50),
 
               // 🔘 Bouton Se connecter
@@ -75,14 +131,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _handleLogin,
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text(
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
                     "Se connecter",
                     style: TextStyle(fontSize: 18, color: Colors.white),
                   ),
@@ -91,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 70),
 
-              // 🔗 Lien de bas de page
+              // 🔗 Lien Créer un compte
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -103,6 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 child: const Text("Pas encore inscrit ?, Créer un compte"),
               ),
+
               // 🔁 Lien Mot de passe oublié
               Align(
                 alignment: Alignment.centerRight,
@@ -121,8 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
-
             ],
           ),
         ),

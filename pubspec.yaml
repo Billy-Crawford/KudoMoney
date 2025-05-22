@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.2.2
   http: ^1.2.1
 
 dev_dependencies:
@@ -23,3 +24,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/kudo1-rbg.png
+    - assets/pointing_man.png
+  fonts:
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/DancingScript-VariableFont_wght.ttf
