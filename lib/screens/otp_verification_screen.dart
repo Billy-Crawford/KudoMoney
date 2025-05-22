@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dashboard_screen.dart';
+import 'dashboardTogo_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
@@ -56,7 +57,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       await prefs.setString('access_token', accessToken);
       await prefs.setString('refresh_token', refreshToken);
 
-      // 🔁 Appeler l’API pour récupérer le nom d’utilisateur et le solde
       final walletResponse = await http.get(
         Uri.parse('https://kudamoney.onrender.com/api/wallets/wallet/'),
         headers: {
@@ -72,18 +72,24 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         final userName = walletData['user'];
         final balance = walletData['balance'];
 
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_name', userName.toString());
         await prefs.setString('balance', balance.toString());
 
+        // ✅ Extraction de l'indicatif
+        final String phoneNumber = _phoneController.text.trim();
+        final match = RegExp(r'^\+?(\d{3})').firstMatch(phoneNumber);
+        final String countryCode = match != null ? match.group(1)! : '';
+
+        Widget targetScreen;
+        if (countryCode == '228') {
+          targetScreen = DashboardTogoScreen(username: userName, balance: balance);
+        } else {
+          targetScreen = DashboardScreen(username: userName, balance: balance);
+        }
+
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-            builder: (_) => DashboardScreen(
-              username: userName,
-              balance: balance,
-            ),
-          ),
+          MaterialPageRoute(builder: (_) => targetScreen),
               (route) => false,
         );
       } else {
